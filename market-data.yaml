@@ -1,0 +1,522 @@
+openapi: 3.1.1
+info:
+  title: Koinju Market Data API
+  description: API for accessing market data including trades, ohlcv and option data.
+  version: 1.0.0
+servers:
+  - url: 'https://api.koinju.io'
+    description: Koinju API Server
+paths:
+  /market/spot:
+    get:
+      summary: Get Spot Markets
+      description: This endpoint allows you to obtain the full list of spot markets
+      security:
+        - basicAuth: [ ]
+      tags:
+        - market_data
+      responses:
+        "200":
+          description: All spot markets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketSpot"
+                  example:
+                    - exchange: 'huobi'
+                      market_symbol: 'DRGN-USDT'
+                      base_asset: 'DRGN'
+                      quote_asset: 'USDT'
+                      exchange_specific_symbol: 'drgnusdt'
+                    - exchange: 'binance'
+                      market_symbol: 'BTC-USDT'
+                      base_asset: 'BTC'
+                      quote_asset: 'USDT'
+                      exchange_specific_symbol: 'btcusdt'
+  /market/future:
+    get:
+      summary: Get Future Markets
+      description: Returns expirable future and perpetual swaps.
+      security:
+        - basicAuth: [ ]
+      tags:
+        - market_data
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketFuture"
+                  example:
+                    - exchange: 'binance'
+                      market_symbol: 'PHA-USDT-PERP'
+                      underlying_asset: 'PHA'
+                      quote_asset: 'USDT'
+                      settling_asset: 'USDT'
+                      expiration: null
+                      contract_size: 1
+                      contract_type: 'LINEAR'
+                      future_type: 'PERPETUAL'
+                      exchange_specific_symbol: 'PHAUSDT'
+                    - exchange: 'binance'
+                      market_symbol: 'SUI-USD-PERP'
+                      underlying_asset: 'SUI'
+                      quote_asset: 'USD'
+                      settling_asset: 'SUI'
+                      denomination_asset: 'USD'
+                      expiration: '2100-12-25T08:00:00Z'
+                      contract_size: 10
+                      contract_type: 'INVERSE'
+                      future_type: 'PERPETUAL'
+                      exchange_specific_symbol: 'SUIUSD_PERP'
+
+  /market/option/active:
+    get:
+      summary: Get active Option Markets
+      security:
+        - basicAuth: [ ]
+      tags:
+        - market_data
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketOption"
+                  example:
+                    - exchange: 'deribit'
+                      market_symbol: 'BTC-BTC-29DEC23-40000-P'
+                      expiration: '2023-12-29T00:00:00Z'
+                      underlying_asset: 'BTC'
+                      quote_asset: 'BTC'
+                      settling_asset: 'BTC'
+                      denomination_asset: 'BTC'
+                      contract_size: 1
+                      contract_type: 'LINEAR'
+                      option_type: 'PUT'
+                      exchange_symbol: 'BTC-29DEC23-40000-P'
+                    - exchange: 'deribit'
+                      market_symbol: 'ETH-BTC-29DEC23-3000-C'
+                      expiration: '2023-12-29T00:00:00Z'
+                      underlying_asset: 'ETH'
+                      quote_asset: 'BTC'
+                      settling_asset: 'BTC'
+                      denomination_asset: 'BTC'
+                      contract_size: 1
+                      contract_type: 'LINEAR'
+                      option_type: 'CALL'
+                      exchange_symbol: 'ETH-29DEC23-3000-C'
+  /market/option/all:
+    get:
+      summary: Get all Option Markets
+      description: |
+        This endpoint returns all option markets, including both active and expired options.
+        It is useful for retrieving a comprehensive list of all options available across exchanges.
+        
+        This endpoint is limited to 10000 instruments that expired before the `expired_before` parameter in descending order of expiration.
+      security:
+        - basicAuth: [ ]
+      tags:
+        - market_data
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: |
+            Filter by exchange name.
+            Example: 'deribit', 'delta'
+          schema:
+            type: string
+            enum: [ 'deribit', 'okx', 'delta' ]
+        - name: expired_before
+          in: query
+          required: true
+          description: |
+            Filter options that expired before a specific date.
+            Format: ISO 8601 date-time (e.g., '2023-12-31T23:59:59Z').
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketOption"
+                  example:
+                    - exchange: 'deribit'
+                      market_symbol: 'BTC-BTC-29DEC23-40000-P'
+                      expiration: '2023-12-29T00:00:00Z'
+                      underlying_asset: 'BTC'
+                      quote_asset: 'BTC'
+                      settling_asset: 'BTC'
+                      denomination_asset: 'BTC'
+                      contract_size: 1
+                      contract_type: 'LINEAR'
+                      option_type: 'PUT'
+                      exchange_symbol: 'BTC-29DEC23-40000-P'
+                    - exchange: 'deribit'
+                      market_symbol: 'ETH-BTC-29DEC23-3000-C'
+                      expiration: '2023-12-29T00:00:00Z'
+                      underlying_asset: 'ETH'
+                      quote_asset: 'BTC'
+                      settling_asset: 'BTC'
+                      denomination_asset: 'BTC'
+                      contract_size: 1
+                      contract_type: 'LINEAR'
+                      option_type: 'CALL'
+                      exchange_symbol: 'ETH-29DEC23-3000-C'
+
+  /ohlcv:
+    get:
+      summary: Get OHLCV for a Market
+      description: |
+        This endpoint retrieves OHLCV (Open, High, Low, Close, Volume) data for a specific market.
+        
+        It includes spot, future, and option markets.
+        
+        This endpoint is limited to 10000 candles per request.
+        
+      security:
+        - basicAuth: [ ]
+      tags:
+        - market_data
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: The name of the exchange to filter by
+          schema:
+            type: string
+
+        - name: market
+          in: query
+          required: true
+          description: The universal market symbol to filter by
+          schema:
+            type: string
+
+        - name: candle_duration_in_minutes
+          in: query
+          required: true
+          description: |
+            The time interval for the candles in minutes.
+            The value can be any amount of minutes:
+            - 1: 1 minute
+            - 5: 5 minutes
+            - 60: 1 hour
+            - 1440: 1 day
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1440
+
+        - name: start_datetime
+          in: query
+          required: true
+          description: |
+            The start time for the OHLCV data in ISO 8601 format (e.g., '2023-01-01T00:00:00Z')
+            or any format that can be parsed by the `parseDateTime64BestEffort`
+          schema:
+            type: string
+            format: date-time
+
+        - name: end_datetime
+          in: query
+          required: true
+          description: |
+            The end time for the OHLCV data in ISO 8601 format (e.g., '2023-01-02T00:00:00Z')
+            or any format that can be parsed by the `parseDateTime64BestEffort`
+          schema:
+            type: string
+            format: date-time
+
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    start:
+                      type: string
+                      format: date-time
+                      description: Start time of the candle
+                    end:
+                      type: string
+                      format: date-time
+                      description: End time of the candle
+                    duration_minutes:
+                      type: integer
+                      description: Duration of the candle in minutes
+                    open:
+                      type: number
+                      format: decimal
+                      description: Opening price of the candle
+                    high:
+                      type: number
+                      format: decimal
+                      description: Highest price during the candle period
+                    low:
+                      type: number
+                      format: decimal
+                      description: Lowest price during the candle period
+                    close:
+                      type: number
+                      format: decimal
+                      description: Closing price of the candle
+                    volume:
+                      type: number
+                      format: decimal
+                      description: Volume traded during the candle period
+                    count:
+                      type: integer
+                      description: Number of trades during the candle period
+                example:
+                    - start: '2023-01-01T00:00:00Z'
+                      end: '2023-01-01T00:01:00Z'
+                      duration_minutes: 1
+                      open: 100.0
+                      high: 105.0
+                      low: 99.0
+                      close: 104.0
+                      volume: 1500.0
+                      count: 25
+                    - start: '2023-01-01T00:01:00Z'
+                      end: '2023-01-01T00:02:00Z'
+                      duration_minutes: 1
+                      open: 104.0
+                      high: 106.0
+                      low: 103.0
+                      close: 105.5
+                      volume: 1200.0
+                      count: 20
+  /trade:
+    get:
+      summary: Get public trade for a Market
+      description: |
+        This endpoint retrieves public trade data for a specific market.
+        
+        It includes spot, future, and option markets.
+        
+        This endpoint is limited to 10000 trades per request.
+
+      security:
+        - basicAuth: [ ]
+      tags:
+        - market_data
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: The name of the exchange to filter by
+          schema:
+            type: string
+
+        - name: market
+          in: query
+          required: true
+          description: The universal market symbol to filter by
+          schema:
+            type: string
+
+        - name: start_datetime
+          in: query
+          required: true
+          description: |
+            The start time for the trade data in ISO 8601 format (e.g., '2023-01-01T00:00:00Z')
+            or any format that can be parsed by the `parseDateTime64BestEffort`
+          schema:
+            type: string
+            format: date-time
+
+        - name: end_datetime
+          in: query
+          required: true
+          description: |
+            The end time for the trade data in ISO 8601 format (e.g., '2023-01-02T00:00:00Z')
+            or any format that can be parsed by the `parseDateTime64BestEffort`
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    exchange:
+                      type: string
+                      description: The name of the exchange
+                    market:
+                      type: string
+                      description: The universal market symbol
+                    side:
+                      type: string
+                      enum: [ buy, sell ]
+                      description: The side of the trade (buy or sell)
+                    quantity:
+                      type: number
+                      format: decimal
+                      description: The quantity of the asset traded
+                    price:
+                      type: number
+                      format: decimal
+                      description: The price at which the trade occurred
+                    timestamp:
+                      type: string
+                      format: date-time
+                      description: The datetime when the trade occurred
+                    trade_id:
+                      type: string
+                      description: Exchange provided unique identifier for the trade
+                  example:
+                    - exchange: 'bitfinex'
+                      market: 'BTC-USD'
+                      side: 'buy'
+                      quantity: 0.27218580000000000000
+                      price: 14.53736640000000000000
+                      timestamp: '2013-01-14T16:47:23Z'
+                      trade_id: '4145'
+                    - exchange: 'bitfinex'
+                      market: 'BTC-USD'
+                      side: 'buy'
+                      quantity: 103.00000000000000000000
+                      price: 14.53736640000000000000
+                      timestamp: '2013-01-14T16:47:24Z'
+                      trade_id: '4146'
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        Use Basic Authentication with:
+        - Username: Your API Key
+        - Password: Your API Secret
+  schemas:
+    MarketSpot:
+      type: object
+      properties:
+        exchange:
+          type: string
+          description: The name of the exchange
+        market_symbol:
+          type: string
+          description: Universal name of market
+        base_asset:
+          type: string
+          description: Universal name of the base asset
+        quote_asset:
+          type: string
+          description: Universal name of the quote asset
+        exchange_specific_symbol:
+          type: string
+          description: Name of the market on the exchange (as referenced by the exchange API)
+      example:
+        exchange: 'huobi'
+        market_symbol: 'DRGN-USDT'
+        base_asset: 'DRGN'
+        quote_asset: 'USDT'
+        exchange_specific_symbol: 'drgnusdt'
+
+
+    MarketFuture:
+      type: object
+      properties:
+        exchange:
+          type: string
+          description: The name of the exchange
+        market_symbol:
+          type: string
+          description: Universal name of market
+        underlying_asset:
+          type: string
+          description: Universal name of the underlying asset
+        quote_asset:
+          type: string
+          description: Universal name of the quote asset
+        settling_asset:
+          type: string
+          description: Universal name of the asset the future is settled in
+        denomination_asset:
+          type: string
+          description: Universal name of the asset the future is denominated in
+        expiration:
+          type: string
+          format: date-time
+          description: |
+            UTC time of the contract expiration. Null for perpetual contracts except binance.
+            Not-null for perpetual contracts that were delivered on delisting or not expired binance contracts.
+        contract_size:
+          type: number
+          format: decimal
+          description: Contract size in denomination_asset
+        contract_type:
+          type: string
+          enum: [ LINEAR, INVERSE ]
+          description: Type of contract (LINEAR or INVERSE)
+        future_type:
+          type: string
+          enum: [ PERPETUAL, EXPIRING ]
+          description: Type of future (PERPETUAL or EXPIRING)
+
+    MarketOption:
+      type: object
+      properties:
+        exchange:
+          type: string
+          description: The name of the exchange
+        market_symbol:
+          type: string
+          description: Universal name of market
+        expiration:
+          type: string
+          format: date-time
+          description: UTC time of the option expiration
+        underlying_asset:
+          type: string
+          description: Universal name of the underlying asset
+        quote_asset:
+          type: string
+          description: Universal name of the quote asset
+        settling_asset:
+          type: string
+          description: Universal name of the asset the option is settled in
+        denomination_asset:
+          type: string
+          description: Universal name of the asset the option is denominated in
+        contract_size:
+          type: number
+          format: decimal
+          description: Contract size in denomination_asset
+        contract_type:
+          type: string
+          enum: [ LINEAR, INVERSE ]
+          description: Type of contract (LINEAR or INVERSE)
+        option_type:
+          type: string
+          enum: [ CALL, PUT ]
+          description: Type of option (CALL or PUT)
+        exchange_symbol:
+          type: string
+          description: Name of the market on the exchange (as referenced by the exchange API)
