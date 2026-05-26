@@ -14,7 +14,7 @@ For other languages see the [Generate Client Libraries](#generate-client-librari
 ## API documentation
 
 #### Official Doc
-The API documentation is available [here](https://koinju.gitbook.io/market-data-api/).
+The API documentation is available [here](https://docs.koinju.io).
 
 ### Online Swagger viewer
 As a quick solution you can display open api spec in [online swagger editor](https://editor.swagger.io/)
